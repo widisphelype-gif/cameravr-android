@@ -67,10 +67,8 @@ internal class VrStereoView @JvmOverloads constructor(
         glView.requestRender()
     }
 
-    override fun onAttachedToWindow() {
-        super.onAttachedToWindow()
-        glView.onResume()
-    }
+    fun onHostResume() { glView.onResume() }
+    fun onHostPause() { glView.onPause() }
 
     override fun onDetachedFromWindow() {
         glView.onPause()
