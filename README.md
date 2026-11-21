@@ -9,7 +9,9 @@ This first milestone establishes the native Android camera app and an automated 
 - Android native app (Kotlin)
 - Rear camera capture through CameraX
 - Frame-analysis pipeline prepared for visual tracking
-- Planned two-hand tracking with MediaPipe
+- MediaPipe Hand Landmarker configured for up to two hands at once
+- Left/right handedness labels and separate overlay colors
+- 21 landmarks per detected hand (up to 42 points total)
 - Planned visual head-orientation estimation without a gyroscope
 - Planned USB (ADB port forwarding) and Wi-Fi transport
 - Planned Windows bridge for SteamVR/OpenXR
@@ -26,7 +28,7 @@ Every push to `main` runs GitHub Actions. Download the `CameraVR-debug-apk` arti
 
 ## Current status
 
-The initial app provides a camera preview and frame analyzer scaffold. Hand landmarks, head pose estimation, network transport, and SteamVR/OpenXR integration are subsequent milestones.
+The Android app now runs MediaPipe Hand Landmarker in video mode with `numHands = 2`, reads the left/right handedness output, and draws both hand skeletons with separate colors and labels. The GitHub Actions workflow downloads the official `.task` model into the Android assets folder before building. Head pose estimation, network transport, and SteamVR/OpenXR integration remain subsequent milestones. The two-hand detector still needs a real-device test under suitable lighting and with both hands inside the rear camera view.
 
 ## Planned transport
 
