@@ -6,7 +6,7 @@ CameraVR is an experimental Android-to-Windows companion for a phone mounted in 
 
 - Native Android app using Kotlin, CameraX and MediaPipe.
 - Rear camera frame analysis and two-hand tracking (up to 21 landmarks per hand).
-- Side-by-side (SBS) display for a VR Box. **Both eye images currently duplicate the same camera image**: this is a 2D viewer format, not true stereoscopic depth.
+- Side-by-side VR Box compositor with separate left/right lens viewports, GPU radial pre-distortion, lens-centre offset, and black outside-lens regions. Both eyes still sample the same camera frame: this is a 2D passthrough view, not true stereoscopic depth.
 - Optional TCP JPEG streaming to the Windows preview receiver.
 - USB transport through ADB reverse and Wi-Fi transport over the same local network.
 - Head orientation estimation from camera motion is still experimental / not implemented as reliable pose tracking.
@@ -16,7 +16,7 @@ CameraVR is an experimental Android-to-Windows companion for a phone mounted in 
 
 Build the debug APK with the GitHub Actions workflow. Install it, grant camera permission, and place the phone so its rear camera is not blocked by the VR Box mount.
 
-The VR Box view splits the display into two equal eye regions. The current renderer duplicates one camera frame; it does not create depth or lens-distortion correction yet.
+The VR Box view uses two eye viewports and an OpenGL ES radial lens pre-warp adapted to the CameraX bitmap pipeline. Both eye viewports currently show the same camera frame, so it does not create stereoscopic depth. Lens coefficients and optical-centre offset are initial generic values and require calibration against the physical viewer.
 
 ## Windows PC receiver
 
