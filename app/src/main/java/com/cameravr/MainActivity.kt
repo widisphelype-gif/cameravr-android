@@ -59,6 +59,10 @@ class MainActivity : AppCompatActivity() {
             setTextColor(android.graphics.Color.WHITE)
             setPadding(16, 14, 8, 14)
         }
+        val display = Button(this).apply {
+            text = "Tela"
+            setOnClickListener { showDisplayDialog() }
+        }
         val connect = Button(this).apply {
             text = "PC / conexão"
             setOnClickListener { showConnectionDialog() }
@@ -68,6 +72,7 @@ class MainActivity : AppCompatActivity() {
             gravity = Gravity.CENTER_VERTICAL
             setBackgroundColor(android.graphics.Color.argb(175, 12, 18, 28))
             addView(title, LinearLayout.LayoutParams(0, -2, 1f))
+            addView(display)
             addView(connect)
         }
         val root = FrameLayout(this).apply {
@@ -81,6 +86,19 @@ class MainActivity : AppCompatActivity() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) ==
             PackageManager.PERMISSION_GRANTED) startCamera()
         else permissionLauncher.launch(Manifest.permission.CAMERA)
+    }
+
+    private fun showDisplayDialog() {
+        val options = arrayOf("VR Box • duas lentes (lado a lado)", "Tela única • juntar em uma imagem")
+        AlertDialog.Builder(this)
+            .setTitle("Modo de visualização")
+            .setSingleChoiceItems(options, if (vrView.isSingleView()) 1 else 0) { dialog, which ->
+                vrView.setSingleView(which == 1)
+                status.text = if (which == 1) "Tela única ativada • imagem sem divisão" else "Modo VR Box ativado • duas lentes"
+                dialog.dismiss()
+            }
+            .setNegativeButton("Fechar", null)
+            .show()
     }
 
     private fun showConnectionDialog() {
