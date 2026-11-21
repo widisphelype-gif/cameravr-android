@@ -192,20 +192,34 @@ class MainActivity : AppCompatActivity() {
 
             val mpImage = BitmapImageBuilder(processedBitmap).build()
             val result = handLandmarker?.detectForVideo(mpImage, SystemClock.uptimeMillis())
-            val hands = result?.landmarks()?.map { hand ->
-                hand.map { landmark ->
-                    PointF(landmark.x(), landmark.y())
-                }
+            val hands = result?.landmarks()?.mapIndexed { index, hand ->
+                val side = result.handedness()
+                    .getOrNull(index)
+                    ?.firstOrNull()
+                    ?.categoryName()
+                    ?.lowercase()
+                    ?: "unknown"
+                TrackedHand(
+                    label = when (side) {
+                        "left" -> "Esquerda"
+                        "right" -> "Direita"
+                        else -> "Mão ${index + 1}"
+                    },
+                    landmarks = hand.map { landmark ->
+                        PointF(landmark.x(), landmark.y())
+                    }
+                )
             }.orEmpty()
             val processedWidth = processedBitmap.width
             val processedHeight = processedBitmap.height
 
             runOnUiThread {
                 handOverlay.updateHands(hands, processedWidth, processedHeight)
+                val detectedSides = hands.map { it.label }
                 status.text = when (hands.size) {
-                    0 -> "MediaPipe ativo • mostre as mãos para a câmera"
-                    1 -> "1 mão detectada • 21 pontos rastreados"
-                    else -> "${hands.size} mãos detectadas • 42 pontos rastreados"
+                    0 -> "MediaPipe ativo • mostre as duas mãos"
+                    1 -> "${detectedSides.first()} detectada • 21 pontos"
+                    else -> "Duas mãos detectadas • ${detectedSides.distinct().joinToString(" + ")} • 42 pontos"
                 }
             }
         } catch (error: Exception) {
@@ -226,21 +240,33 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
+private data class TrackedHand(
+    val label: String,
+    val landmarks: List<PointF>
+)
+
 private class HandOverlayView(context: android.content.Context) : View(context) {
     private val pointPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.rgb(0, 255, 190)
         style = Paint.Style.FILL
     }
     private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.rgb(50, 210, 255)
         strokeWidth = 4f
         style = Paint.Style.STROKE
     }
-    private var hands: List<List<PointF>> = emptyList()
+    private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        textSize = 34f
+        typeface = android.graphics.Typeface.create(
+            android.graphics.Typeface.DEFAULT,
+            android.graphics.Typeface.BOLD
+        )
+        setShadowLayer(5f, 1f, 1f, Color.BLACK)
+    }
+    private var hands: List<TrackedHand> = emptyList()
     private var sourceWidth = 1
     private var sourceHeight = 1
 
-    fun updateHands(newHands: List<List<PointF>>, width: Int, height: Int) {
+    fun updateHands(newHands: List<TrackedHand>, width: Int, height: Int) {
         hands = newHands
         sourceWidth = width.coerceAtLeast(1)
         sourceHeight = height.coerceAtLeast(1)
@@ -254,19 +280,30 @@ private class HandOverlayView(context: android.content.Context) : View(context) 
         val offsetY = (height - sourceHeight * scale) / 2f
 
         hands.forEach { hand ->
+            val handColor = when (hand.label) {
+                "Esquerda" -> Color.rgb(70, 170, 255)
+                "Direita" -> Color.rgb(0, 235, 170)
+                else -> Color.rgb(255, 210, 80)
+            }
+            linePaint.color = handColor
+            pointPaint.color = handColor
+
             fun px(point: PointF) = offsetX + point.x * sourceWidth * scale
             fun py(point: PointF) = offsetY + point.y * sourceHeight * scale
 
             CONNECTIONS.forEach { (start, end) ->
-                if (start < hand.size && end < hand.size) {
+                if (start < hand.landmarks.size && end < hand.landmarks.size) {
                     canvas.drawLine(
-                        px(hand[start]), py(hand[start]),
-                        px(hand[end]), py(hand[end]), linePaint
+                        px(hand.landmarks[start]), py(hand.landmarks[start]),
+                        px(hand.landmarks[end]), py(hand.landmarks[end]), linePaint
                     )
                 }
             }
-            hand.forEach { point ->
+            hand.landmarks.forEach { point ->
                 canvas.drawCircle(px(point), py(point), 6f, pointPaint)
+            }
+            hand.landmarks.firstOrNull()?.let { wrist ->
+                canvas.drawText(hand.label, px(wrist) + 10f, py(wrist) - 14f, labelPaint)
             }
         }
     }
