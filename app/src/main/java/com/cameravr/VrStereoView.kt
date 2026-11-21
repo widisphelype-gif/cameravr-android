@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.Rect
 import android.graphics.RectF
 import android.view.View
@@ -55,7 +56,20 @@ internal class VrStereoView(context: Context) : View(context) {
 
     private fun drawEye(canvas: Canvas, bitmap: Bitmap, viewport: RectF) {
         val save = canvas.save()
-        canvas.clipRect(viewport)
+        if (singleView) {
+            canvas.clipRect(viewport)
+        } else {
+            // Lens-shaped mask: visual styling only, without changing the camera image.
+            val lens = Path().apply {
+                moveTo(viewport.left + viewport.width() * 0.12f, viewport.top + viewport.height() * 0.08f)
+                cubicTo(viewport.left + viewport.width() * 0.34f, viewport.top - viewport.height() * 0.01f, viewport.left + viewport.width() * 0.66f, viewport.top - viewport.height() * 0.01f, viewport.left + viewport.width() * 0.88f, viewport.top + viewport.height() * 0.08f)
+                cubicTo(viewport.left + viewport.width() * 0.98f, viewport.top + viewport.height() * 0.28f, viewport.left + viewport.width() * 0.98f, viewport.top + viewport.height() * 0.70f, viewport.left + viewport.width() * 0.88f, viewport.top + viewport.height() * 0.90f)
+                cubicTo(viewport.left + viewport.width() * 0.66f, viewport.top + viewport.height() * 0.99f, viewport.left + viewport.width() * 0.34f, viewport.top + viewport.height() * 0.99f, viewport.left + viewport.width() * 0.12f, viewport.top + viewport.height() * 0.90f)
+                cubicTo(viewport.left + viewport.width() * 0.02f, viewport.top + viewport.height() * 0.70f, viewport.left + viewport.width() * 0.02f, viewport.top + viewport.height() * 0.28f, viewport.left + viewport.width() * 0.12f, viewport.top + viewport.height() * 0.08f)
+                close()
+            }
+            canvas.clipPath(lens)
+        }
         val scale = maxOf(viewport.width() / bitmap.width, viewport.height() / bitmap.height)
         val dw = bitmap.width * scale
         val dh = bitmap.height * scale
