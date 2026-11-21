@@ -25,10 +25,14 @@ internal class VrTransport {
 
     fun sendFrame(bitmap: Bitmap) {
         if (!busy.compareAndSet(false, true)) return
+        val snapshot = try { bitmap.copy(Bitmap.Config.ARGB_8888, false) } catch (_: Exception) {
+            busy.set(false)
+            return
+        }
         executor.execute {
             try {
                 val bytes = java.io.ByteArrayOutputStream().use { buffer ->
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 65, buffer)
+                    snapshot.compress(Bitmap.CompressFormat.JPEG, 65, buffer)
                     buffer.toByteArray()
                 }
                 var out = output
@@ -47,6 +51,7 @@ internal class VrTransport {
             } catch (_: Exception) {
                 disconnectSocket()
             } finally {
+                if (!snapshot.isRecycled) snapshot.recycle()
                 busy.set(false)
             }
         }
