@@ -21,6 +21,14 @@ internal class VrStereoView(context: Context) : View(context) {
     }
     @Volatile private var frame: Bitmap? = null
     @Volatile private var hands: List<TrackedHand> = emptyList()
+    @Volatile private var singleView: Boolean = false
+
+    fun setSingleView(enabled: Boolean) {
+        singleView = enabled
+        invalidate()
+    }
+
+    fun isSingleView(): Boolean = singleView
 
     fun update(bitmap: Bitmap, trackedHands: List<TrackedHand>) {
         val old = frame
@@ -34,11 +42,15 @@ internal class VrStereoView(context: Context) : View(context) {
         super.onDraw(canvas)
         canvas.drawColor(Color.BLACK)
         val current = frame ?: return
-        val half = width / 2f
-        drawEye(canvas, current, RectF(0f, 0f, half, height.toFloat()))
-        drawEye(canvas, current, RectF(half, 0f, width.toFloat(), height.toFloat()))
-        val divider = Paint().apply { color = Color.DKGRAY; strokeWidth = 2f }
-        canvas.drawLine(half, 0f, half, height.toFloat(), divider)
+        if (singleView) {
+            drawEye(canvas, current, RectF(0f, 0f, width.toFloat(), height.toFloat()))
+        } else {
+            val half = width / 2f
+            drawEye(canvas, current, RectF(0f, 0f, half, height.toFloat()))
+            drawEye(canvas, current, RectF(half, 0f, width.toFloat(), height.toFloat()))
+            val divider = Paint().apply { color = Color.DKGRAY; strokeWidth = 2f }
+            canvas.drawLine(half, 0f, half, height.toFloat(), divider)
+        }
     }
 
     private fun drawEye(canvas: Canvas, bitmap: Bitmap, viewport: RectF) {
