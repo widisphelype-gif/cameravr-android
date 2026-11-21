@@ -181,24 +181,27 @@ class MainActivity : AppCompatActivity() {
             val rawBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             rawBitmap.copyPixelsFromBuffer(ByteBuffer.wrap(packed))
             val rotation = image.imageInfo.rotationDegrees
-            bitmap = if (rotation != 0) {
+            val processedBitmap = if (rotation != 0) {
                 val matrix = Matrix().apply { postRotate(rotation.toFloat()) }
                 Bitmap.createBitmap(rawBitmap, 0, 0, width, height, matrix, true)
                     .also { if (it !== rawBitmap) rawBitmap.recycle() }
             } else {
                 rawBitmap
             }
+            bitmap = processedBitmap
 
-            val mpImage = BitmapImageBuilder(bitmap).build()
+            val mpImage = BitmapImageBuilder(processedBitmap).build()
             val result = handLandmarker?.detectForVideo(mpImage, SystemClock.uptimeMillis())
             val hands = result?.landmarks()?.map { hand ->
                 hand.map { landmark ->
                     PointF(landmark.x(), landmark.y())
                 }
             }.orEmpty()
+            val processedWidth = processedBitmap.width
+            val processedHeight = processedBitmap.height
 
             runOnUiThread {
-                handOverlay.updateHands(hands, bitmap?.width ?: width, bitmap?.height ?: height)
+                handOverlay.updateHands(hands, processedWidth, processedHeight)
                 status.text = when (hands.size) {
                     0 -> "MediaPipe ativo • mostre as mãos para a câmera"
                     1 -> "1 mão detectada • 21 pontos rastreados"
