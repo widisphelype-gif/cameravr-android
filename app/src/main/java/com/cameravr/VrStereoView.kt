@@ -43,6 +43,7 @@ internal class VrStereoView @JvmOverloads constructor(
     init {
         glView.setRenderer(compositor)
         glView.renderMode = GLSurfaceView.RENDERMODE_WHEN_DIRTY
+        compositor.xdpi = resources.displayMetrics.xdpi.coerceAtLeast(160f)
         addView(glView, LayoutParams(-1, -1))
         addView(overlay, LayoutParams(-1, -1))
     }
@@ -59,19 +60,21 @@ internal class VrStereoView @JvmOverloads constructor(
 
     fun update(bitmap: Bitmap, trackedHands: List<TrackedHand>) {
         compositor.submit(bitmap)
+        overlay.frameWidth = bitmap.width
+        overlay.frameHeight = bitmap.height
         overlay.hands = trackedHands
         overlay.invalidate()
         glView.requestRender()
     }
 
-    override fun onResume() {
-        super.onResume()
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
         glView.onResume()
     }
 
-    override fun onPause() {
+    override fun onDetachedFromWindow() {
         glView.onPause()
-        super.onPause()
+        super.onDetachedFromWindow()
     }
 
     private class LensRenderer : GLSurfaceView.Renderer {
@@ -88,6 +91,9 @@ internal class VrStereoView @JvmOverloads constructor(
         private var cropUniform = 0
         private var viewportW = 1
         private var viewportH = 1
+        var xdpi = 400f
+        private var frameWidth = 640
+        private var frameHeight = 480
         private val vertices: FloatBuffer = ByteBuffer.allocateDirect(16 * 4)
             .order(ByteOrder.nativeOrder()).asFloatBuffer().apply {
                 put(floatArrayOf(
@@ -164,6 +170,8 @@ internal class VrStereoView @JvmOverloads constructor(
         override fun onDrawFrame(gl: GL10?) {
             val next = synchronized(lock) { pending.also { pending = null } }
             if (next != null && !next.isRecycled) {
+                frameWidth = next.width
+                frameHeight = next.height
                 GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, texture)
                 GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, next, 0)
                 next.recycle()
@@ -193,11 +201,10 @@ internal class VrStereoView @JvmOverloads constructor(
                 val aspect = half.toFloat() / viewportH
                 // Centre-crop the camera frame to each tall/wide eye viewport.
                 // CameraX frames are landscape; VR viewers should be used in landscape orientation.
-                val frameAspect = 4f / 3f
+                val frameAspect = frameWidth.toFloat() / frameHeight.toFloat()
                 val cropX = if (frameAspect > aspect) aspect / frameAspect else 1f
                 val cropY = if (frameAspect > aspect) 1f else frameAspect / aspect
-                val density = resourcesDensityFallback
-                val pxPerMm = density / 25.4f
+                val pxPerMm = xdpi / 25.4f
                 val lensOffsetPx = 31.5f * pxPerMm
                 val centerOffset = (lensOffsetPx / half.toFloat()).coerceIn(0.04f, 0.28f)
                 for (eye in 0..1) {
@@ -213,10 +220,6 @@ internal class VrStereoView @JvmOverloads constructor(
             GLES20.glDisableVertexAttribArray(position)
             GLES20.glDisableVertexAttribArray(uv)
         }
-
-        // Physical density in dots per inch, with a safe Android-independent fallback.
-        private val resourcesDensityFallback: Float
-            get() = 400f
 
         private fun linkProgram(vertex: String, fragment: String): Int {
             fun compile(type: Int, source: String): Int {
@@ -246,6 +249,8 @@ internal class VrStereoView @JvmOverloads constructor(
     private class HandOverlay(context: Context) : View(context) {
         @Volatile var hands: List<TrackedHand> = emptyList()
         @Volatile var singleView = false
+        @Volatile var frameWidth = 640
+        @Volatile var frameHeight = 480
         private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { strokeWidth = 3.5f }
         private val pointPaint = Paint(Paint.ANTI_ALIAS_FLAG)
         private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -276,11 +281,9 @@ internal class VrStereoView @JvmOverloads constructor(
                 close()
             }
             canvas.clipPath(lens)
-            val aspect = viewport.width() / viewport.height()
-            val frameAspect = 4f / 3f
-            val scale = max(viewport.width() / 640f, viewport.height() / 480f)
-            val dw = 640f * scale
-            val dh = 480f * scale
+            val scale = max(viewport.width() / frameWidth.toFloat(), viewport.height() / frameHeight.toFloat())
+            val dw = frameWidth * scale
+            val dh = frameHeight * scale
             val left = viewport.centerX() - dw / 2f
             val top = viewport.centerY() - dh / 2f
             hands.forEach { hand ->
