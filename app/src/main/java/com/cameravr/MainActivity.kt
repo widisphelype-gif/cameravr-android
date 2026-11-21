@@ -239,6 +239,16 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        if (::vrView.isInitialized) vrView.onHostResume()
+    }
+
+    override fun onPause() {
+        if (::vrView.isInitialized) vrView.onHostPause()
+        super.onPause()
+    }
+
     override fun onDestroy() {
         streaming = false
         transport.close()
