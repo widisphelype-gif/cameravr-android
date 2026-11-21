@@ -1,40 +1,59 @@
 # CameraVR
 
-CameraVR is an experimental Android-to-Windows VR companion for a phone mounted in a VR Box.
+CameraVR is an experimental Android-to-Windows companion for a phone mounted in a VR Box.
 
-## Initial milestone
+## Current Android milestone
 
-This first milestone establishes the native Android camera app and an automated APK build. It is **not yet a complete VR tracker**.
+- Native Android app using Kotlin, CameraX and MediaPipe.
+- Rear camera frame analysis and two-hand tracking (up to 21 landmarks per hand).
+- Side-by-side (SBS) display for a VR Box. **Both eye images currently duplicate the same camera image**: this is a 2D viewer format, not true stereoscopic depth.
+- Optional TCP JPEG streaming to the Windows preview receiver.
+- USB transport through ADB reverse and Wi-Fi transport over the same local network.
+- Head orientation estimation from camera motion is still experimental / not implemented as reliable pose tracking.
+- SteamVR/OpenXR driver integration is not included yet.
 
-- Android native app (Kotlin)
-- Rear camera capture through CameraX
-- Frame-analysis pipeline prepared for visual tracking
-- MediaPipe Hand Landmarker configured for up to two hands at once
-- Left/right handedness labels and separate overlay colors
-- 21 landmarks per detected hand (up to 42 points total)
-- Planned visual head-orientation estimation without a gyroscope
-- Planned USB (ADB port forwarding) and Wi-Fi transport
-- Planned Windows bridge for SteamVR/OpenXR
+## Run on Android
 
-## Important hardware limitation
+Build the debug APK with the GitHub Actions workflow. Install it, grant camera permission, and place the phone so its rear camera is not blocked by the VR Box mount.
 
-With the phone's rear camera facing outward, it can observe the room and hands that enter its field of view. It cannot directly observe the wearer's face. Visual head rotation estimation therefore needs stable environmental features and careful camera mounting/calibration. It will not provide the same reliability or low latency as a physical IMU. Translation/depth and full 6DoF tracking are separate, harder problems.
+The VR Box view splits the display into two equal eye regions. The current renderer duplicates one camera frame; it does not create depth or lens-distortion correction yet.
 
-For hand tracking, both hands must remain visible to the rear camera. The VR Box and phone mount must not obstruct the camera.
+## Windows PC receiver
 
-## Build APK
+Install Python 3, then install dependencies:
 
-Every push to `main` runs GitHub Actions. Download the `CameraVR-debug-apk` artifact from the workflow run.
+```powershell
+py -m pip install opencv-python numpy
+py pc/receiver.py
+```
+
+Allow Python through Windows Firewall on a trusted private network when prompted. Keep the PC and phone on the same Wi-Fi for wireless streaming.
+
+### Wi-Fi
+
+1. Start `py pc/receiver.py` on the PC.
+2. Find the PC's local IPv4 address with `ipconfig`.
+3. In CameraVR, tap **PC / conexão**, enter that IPv4 address and port `4242`, then tap **Conectar**.
+
+### USB
+
+1. Enable Android USB debugging and authorize the connected PC.
+2. Start the receiver on the PC.
+3. Run `adb reverse tcp:4242 tcp:4242` on the PC.
+4. In CameraVR, set host to `127.0.0.1`, port `4242`, and tap **Conectar**.
+
+USB reverse forwarding requires Android Platform Tools (ADB). Wi-Fi and USB are selectable by choosing the corresponding host address.
+
+## Important tracking limitations
+
+The rear camera does not see the wearer's face. Estimating head rotation from the outside scene requires visual odometry / optical-flow work and calibration; it is not yet implemented as reliable head pose. It should not be treated as a substitute for an IMU or as full 6DoF tracking.
+
+Both hands must remain inside the rear camera's field of view. Depending on the VR Box mount, that may require a separate camera position or external camera.
+
+## Build
+
+Every push to `main` runs GitHub Actions and publishes the `CameraVR-debug-apk` artifact if the build succeeds.
 
 ## Current status
 
-The Android app now runs MediaPipe Hand Landmarker in video mode with `numHands = 2`, reads the left/right handedness output, and draws both hand skeletons with separate colors and labels. The GitHub Actions workflow downloads the official `.task` model into the Android assets folder before building. Head pose estimation, network transport, and SteamVR/OpenXR integration remain subsequent milestones. The two-hand detector still needs a real-device test under suitable lighting and with both hands inside the rear camera view.
-
-## Planned transport
-
-- Wi-Fi: local network connection to the Windows bridge.
-- USB: Android Debug Bridge (ADB) port forwarding, requiring USB debugging to be enabled and authorized.
-
-## Safety and privacy
-
-Camera frames are processed on-device in this initial design. Do not point the camera at people without their consent.
+The Android viewer and initial PC frame receiver are prototype milestones. They do not yet expose a SteamVR headset or controllers. Real-device testing is required for camera orientation, performance, thermal behavior, USB and Wi-Fi stability.
