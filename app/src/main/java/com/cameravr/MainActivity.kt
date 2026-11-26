@@ -67,12 +67,22 @@ class MainActivity : AppCompatActivity() {
             text = "PC / conexão"
             setOnClickListener { showConnectionDialog() }
         }
+        val mixedReality = Button(this).apply {
+            text = "MR: OFF"
+            setOnClickListener {
+                val enabled = !vrView.isMixedRealityEnabled()
+                vrView.setMixedRealityEnabled(enabled)
+                text = if (enabled) "MR: ON" else "MR: OFF"
+                status.text = if (enabled) "Realidade mista visual ativada" else "Realidade mista desligada"
+            }
+        }
         val top = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setBackgroundColor(android.graphics.Color.argb(175, 12, 18, 28))
             addView(title, LinearLayout.LayoutParams(0, -2, 1f))
             addView(display)
+            addView(mixedReality)
             addView(connect)
         }
         val root = FrameLayout(this).apply {
