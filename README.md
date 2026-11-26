@@ -57,3 +57,10 @@ Every push to `main` runs GitHub Actions and publishes the `CameraVR-debug-apk` 
 ## Current status
 
 The Android viewer and initial PC frame receiver are prototype milestones. They do not yet expose a SteamVR headset or controllers. Real-device testing is required for camera orientation, performance, thermal behavior, USB and Wi-Fi stability.
+
+
+## Mixed Reality (MR) prototype
+
+The `feature/mixed-reality-vrbox` branch adds an optional visual mixed-reality overlay to the existing rear-camera passthrough. Toggle it with **MR: ON/OFF**. The overlay draws a per-eye status panel, reticle, and wireframe hologram while preserving hand landmarks and the existing PC streaming pipeline.
+
+**Limitations:** this milestone is camera passthrough with screen-space holographic UI, not full spatial AR. Both eye viewports still use the same camera frame, so there is no real stereoscopic depth, world locking, plane detection, or reliable head pose. Treat the hologram as a visual demo, not a depth-accurate object in the room.

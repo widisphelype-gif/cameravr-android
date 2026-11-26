@@ -58,6 +58,13 @@ internal class VrStereoView @JvmOverloads constructor(
 
     fun isSingleView(): Boolean = singleView
 
+    fun setMixedRealityEnabled(enabled: Boolean) {
+        overlay.mixedRealityEnabled = enabled
+        overlay.invalidate()
+    }
+
+    fun isMixedRealityEnabled(): Boolean = overlay.mixedRealityEnabled
+
     fun update(bitmap: Bitmap, trackedHands: List<TrackedHand>) {
         compositor.submit(bitmap)
         overlay.frameWidth = bitmap.width
@@ -249,6 +256,7 @@ internal class VrStereoView @JvmOverloads constructor(
         @Volatile var singleView = false
         @Volatile var frameWidth = 640
         @Volatile var frameHeight = 480
+        @Volatile var mixedRealityEnabled = false
         private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { strokeWidth = 3.5f }
         private val pointPaint = Paint(Paint.ANTI_ALIAS_FLAG)
         private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -260,12 +268,70 @@ internal class VrStereoView @JvmOverloads constructor(
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
             if (singleView) {
-                drawHands(canvas, RectF(0f, 0f, width.toFloat(), height.toFloat()))
+                val viewport = RectF(0f, 0f, width.toFloat(), height.toFloat())
+                drawHands(canvas, viewport)
+                if (mixedRealityEnabled) drawMixedReality(canvas, viewport)
             } else {
                 val half = width / 2f
-                drawHands(canvas, RectF(0f, 0f, half, height.toFloat()))
-                drawHands(canvas, RectF(half, 0f, width.toFloat(), height.toFloat()))
+                val leftEye = RectF(0f, 0f, half, height.toFloat())
+                val rightEye = RectF(half, 0f, width.toFloat(), height.toFloat())
+                drawHands(canvas, leftEye)
+                drawHands(canvas, rightEye)
+                if (mixedRealityEnabled) {
+                    drawMixedReality(canvas, leftEye)
+                    drawMixedReality(canvas, rightEye)
+                }
             }
+        }
+
+        private fun drawMixedReality(canvas: Canvas, viewport: RectF) {
+            val save = canvas.save()
+            canvas.translate(viewport.left, viewport.top)
+            canvas.scale(viewport.width() / 480f, viewport.height() / 800f)
+            val panel = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(190, 5, 22, 30) }
+            val edge = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.rgb(0, 235, 190)
+                style = Paint.Style.STROKE
+                strokeWidth = 2.2f
+            }
+            val glow = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(65, 0, 235, 190) }
+            val heading = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.WHITE
+                textSize = 18f
+                typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.BOLD)
+            }
+            val small = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.rgb(135, 245, 225)
+                textSize = 12f
+            }
+            val card = RectF(22f, 74f, 205f, 137f)
+            canvas.drawRoundRect(card, 12f, 12f, glow)
+            canvas.drawRoundRect(card, 12f, 12f, panel)
+            canvas.drawRoundRect(card, 12f, 12f, edge)
+            canvas.drawText("MR NEX", 36f, 99f, heading)
+            canvas.drawText("PASSTHROUGH ATIVO", 36f, 119f, small)
+
+            val cx = 240f
+            val cy = 410f
+            canvas.drawCircle(cx, cy, 18f, edge)
+            canvas.drawLine(cx - 29f, cy, cx - 9f, cy, edge)
+            canvas.drawLine(cx + 9f, cy, cx + 29f, cy, edge)
+            canvas.drawLine(cx, cy - 29f, cx, cy - 9f, edge)
+            canvas.drawLine(cx, cy + 9f, cx, cy + 29f, edge)
+
+            val cube = Path().apply {
+                moveTo(240f, 350f); lineTo(275f, 370f); lineTo(240f, 390f)
+                lineTo(205f, 370f); close()
+                moveTo(205f, 370f); lineTo(205f, 410f); lineTo(240f, 432f)
+                lineTo(240f, 390f)
+                moveTo(275f, 370f); lineTo(275f, 410f); lineTo(240f, 432f)
+            }
+            canvas.drawPath(cube, edge)
+            val footer = RectF(150f, 690f, 330f, 738f)
+            canvas.drawRoundRect(footer, 16f, 16f, panel)
+            canvas.drawRoundRect(footer, 16f, 16f, edge)
+            canvas.drawText("HOLOGRAMA • DEMO", 170f, 719f, small)
+            canvas.restoreToCount(save)
         }
 
         private fun drawHands(canvas: Canvas, viewport: RectF) {
